@@ -17,14 +17,14 @@
         target="_blank"
       >Wikidata</a>
       <b-row>
-        <b-col>
+        <b-col cols="10">
           <b-textarea style="height:512px" v-if="api_result" :value="api_result"></b-textarea>
         </b-col>
         <b-col>
           <b-textarea style="height:512px" v-if="person_info" :value="person_info"></b-textarea>
         </b-col>
       </b-row>
-
+      <PersonView v-if="person_object" :person="person_object" />
       <b-card>
         <b-row>
           <b-col cols="8">
@@ -41,16 +41,18 @@
 
 <script>
 import axios from "axios";
+import PersonView from "./partials/PersonView";
 export default {
   name: "AddPerson",
-  components: {},
+  components: { PersonView },
   data() {
     return {
       wikipedia_link: "https://en.wikipedia.org/wiki/Yuan_Shikai",
       wikibase_item: "",
       api_result: "",
       wikidata_response: null,
-      person_info: ""
+      person_info: "",
+      person_object: null
     };
   },
   mounted() {},
@@ -58,6 +60,7 @@ export default {
     onSubmit() {},
     onReset() {},
     queryWikipedia(query) {
+      this.person_object = null;
       this.wikibase_item = "";
       this.api_result = "";
       var wiki_name = query.replace("https://en.wikipedia.org/wiki/", "");
@@ -88,23 +91,66 @@ export default {
       });
     },
     parseWikidataReponse(response) {
+      this.person_object = {};
       let person =
         response.data.entities[Object.keys(response.data.entities)[0]];
-      this.person_info = "Name:\t";
-      this.person_info += person.labels.zh.value || "";
-      this.person_info += " (" + person.labels.en.value + ")" || "";
-      this.person_info += "\nAliases:\t";
+
       let aliases = [];
+      let names = [];
+      let imgs = [];
+
+      // Add the labels (Wikipedia page common name)
+      Object.keys(person.labels).forEach(lang => {
+        names.push(person.labels[lang]);
+      });
+
+      // Add the aliases
       Object.keys(person.aliases).forEach(lang => {
         person.aliases[lang].forEach(a => {
-          aliases.push(a.value);
+          aliases.push(a);
         });
       });
-      /*
-      person.aliases.en.forEach(a => {
-        aliases.push(a.value);
-      });*/
-      this.person_info += aliases.join("\n\t\t");
+
+      // Add the images from property P18
+      person.claims.P18.forEach(img => {
+        imgs.push(img.mainsnak.datavalue.value);
+      });
+
+      // Add the birth_dates from property P569
+      this.person_object.birth_dates = [];
+      person.claims.P569.forEach(bd => {
+        this.person_object.birth_dates.push(bd.mainsnak.datavalue);
+      });
+
+      // Add the wikimedia commons gallery property P373 (for more images)
+      let wiki_commons = this.getPropertyValue(person, "P373",true);
+      console.log(this.getPropertyValue(person, "P569"));
+      this.person_object.names = names;
+      this.person_object.aliases = aliases;
+      this.person_object.images = imgs;
+      this.person_object.wiki_commons = wiki_commons;
+    },
+    getPropertyValue(data, property, single_value = false) {
+      let results = [];
+      if (data.claims[property] != null) {
+        if (single_value) {
+          // Single value result
+          return data.claims[property][0].mainsnak.datavalue.value;
+        } else if ((data.claims[property][0].datatype = "time")) {
+          // Process dates here
+          data.claims[property].forEach(p => {
+            results.push(p.mainsnak.datavalue);
+          });
+          return results;
+        } else {
+          data.claims[property].forEach(p => {
+            // Basic array of the values
+            results.push(p.mainsnak.datavalue.value);
+          });
+          return results;
+        }
+      }
+      return null;
     }
   }
 };
