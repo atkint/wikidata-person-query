@@ -19,9 +19,7 @@
         </span>
       </b-col>
       <b-col cols="6">
-        {{new Date(person.birth_dates[0].value.time.substring(1,person.birth_dates[0].value.time.length-1))}}
         <br />
-        {{person.birth_dates[0].value.time.substring(1,person.birth_dates[0].value.time.length-1)}}
       </b-col>
     </b-row>
   </b-card>

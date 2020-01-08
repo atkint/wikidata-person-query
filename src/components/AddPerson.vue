@@ -97,12 +97,12 @@ export default {
 
       let aliases = [];
       let names = [];
-      let imgs = [];
 
       // Add the labels (Wikipedia page common name)
       Object.keys(person.labels).forEach(lang => {
         names.push(person.labels[lang]);
       });
+      this.person_object.names = names;
 
       // Add the aliases
       Object.keys(person.aliases).forEach(lang => {
@@ -110,38 +110,73 @@ export default {
           aliases.push(a);
         });
       });
+      this.person_object.aliases = aliases;
 
-      // Add the images from property P18
-      person.claims.P18.forEach(img => {
-        imgs.push(img.mainsnak.datavalue.value);
-      });
-
-      // Add the birth_dates from property P569
-      this.person_object.birth_dates = [];
-      person.claims.P569.forEach(bd => {
-        this.person_object.birth_dates.push(bd.mainsnak.datavalue);
-      });
+      this.person_object.images = this.getPropertyValue(person, "P18");
+      this.person_object.birth_dates = this.getPropertyObject(person, "P569");
+      this.person_object.death_dates = this.getPropertyObject(person, "P570");
+      this.person_object.burial_places = this.getPropertyId(person, "P119");
+      this.person_object.death_places = this.getPropertyId(person, "P20");
+      this.person_object.birth_places = this.getPropertyId(person, "P19");
+      this.person_object.manner_of_death = this.getPropertyId(person, "P1196");
+      this.person_object.cause_of_death = this.getPropertyId(person, "P509");
+      this.person_object.wikidata_id = person["id"];
+      this.person_object.wikilinks = person.sitelinks;
 
       // Add the wikimedia commons gallery property P373 (for more images)
-      let wiki_commons = this.getPropertyValue(person, "P373",true);
-      console.log(this.getPropertyValue(person, "P569"));
-      this.person_object.names = names;
-      this.person_object.aliases = aliases;
-      this.person_object.images = imgs;
-      this.person_object.wiki_commons = wiki_commons;
+      this.person_object.wiki_commons = this.getPropertyValue(
+        person,
+        "P373",
+        true
+      );
+      // Add the date that this was retrieved so updates can be done later
+      this.person_object.scrape_date = new Date();
     },
+
+    // For wikidata entities. Eg. Other places/people where the id is what's needed
+    getPropertyId(data, property, single_value = false) {
+      let results = [];
+      if (data.claims[property] != null) {
+        if (single_value) {
+          // Single value result
+          return data.claims[property][0].mainsnak.datavalue.value.id;
+        } else {
+          // Array of the objects
+          data.claims[property].forEach(p => {
+            results.push(p.mainsnak.datavalue.value.id);
+          });
+          return results;
+        }
+      }
+      return null;
+    },
+
+    // For the whole datavalue object. Eg. for dates/times
+    getPropertyObject(data, property, single_value = false) {
+      let results = [];
+      console.log(data.claims[property]);
+      if (data.claims[property] != null) {
+        if (single_value) {
+          // Single value result
+          return data.claims[property][0].mainsnak.datavalue;
+        } else {
+          data.claims[property].forEach(p => {
+            // Array of the objects
+            results.push(p.mainsnak.datavalue);
+          });
+          return results;
+        }
+      }
+      return null;
+    },
+
+    // For properties that have a string or integer value
     getPropertyValue(data, property, single_value = false) {
       let results = [];
       if (data.claims[property] != null) {
         if (single_value) {
           // Single value result
           return data.claims[property][0].mainsnak.datavalue.value;
-        } else if ((data.claims[property][0].datatype = "time")) {
-          // Process dates here
-          data.claims[property].forEach(p => {
-            results.push(p.mainsnak.datavalue);
-          });
-          return results;
         } else {
           data.claims[property].forEach(p => {
             // Basic array of the values
@@ -156,4 +191,6 @@ export default {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+
+</style>
