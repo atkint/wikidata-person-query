@@ -42,6 +42,9 @@
 <script>
 import axios from "axios";
 import PersonView from "./partials/PersonView";
+import deriver from "../utilities/wiki_deriver"
+import parser from "../utilities/wikidata_parser"
+
 export default {
   name: "AddPerson",
   components: { PersonView },
@@ -63,7 +66,7 @@ export default {
       this.person_object = null;
       this.wikibase_item = "";
       this.api_result = "";
-      var wiki_name = query.replace("https://en.wikipedia.org/wiki/", "");
+      var wiki_name = query.replace("https://zh.wikipedia.org/wiki/","").replace("https://en.wikipedia.org/wiki/", "");
       this.query_string =
         "https://en.wikipedia.org/w/api.php?action=query&prop=pageprops&ppprop=wikibase_item&redirects=1&titles=" +
         wiki_name +
@@ -102,7 +105,7 @@ export default {
       Object.keys(person.labels).forEach(lang => {
         names.push(person.labels[lang]);
       });
-      this.person_object.names = names;
+      this.person_object.names = parser.getNamesOrAliases(person);
 
       // Add the aliases
       Object.keys(person.aliases).forEach(lang => {
@@ -110,18 +113,20 @@ export default {
           aliases.push(a);
         });
       });
-      this.person_object.aliases = aliases;
-
-      this.person_object.images = this.getPropertyValue(person, "P18");
-      this.person_object.birth_dates = this.getPropertyObject(person, "P569");
-      this.person_object.death_dates = this.getPropertyObject(person, "P570");
-      this.person_object.burial_places = this.getPropertyId(person, "P119");
-      this.person_object.death_places = this.getPropertyId(person, "P20");
-      this.person_object.birth_places = this.getPropertyId(person, "P19");
-      this.person_object.manner_of_death = this.getPropertyId(person, "P1196");
-      this.person_object.cause_of_death = this.getPropertyId(person, "P509");
+      this.person_object.aliases = parser.getNamesOrAliases(person,"aliases");
+      this.person_object.gender = parser.getPropertyId(person, "P21");
+      this.person_object.images = parser.getPropertyValue(person, "P18");
+      this.person_object.birth_dates = parser.getPropertyObject(person, "P569");
+      this.person_object.death_dates = parser.getPropertyObject(person, "P570");
+      this.person_object.birth_places = parser.getPropertyId(person, "P19");
+      this.person_object.death_places = parser.getPropertyId(person, "P20");
+      this.person_object.burial_places = parser.getPropertyId(person, "P119");
+      this.person_object.religion = parser.getPropertyId(person, "P140");
+      this.person_object.manner_of_death = parser.getPropertyId(person, "P1196");
+      this.person_object.cause_of_death = parser.getPropertyId(person, "P509");
       this.person_object.wikidata_id = person["id"];
       this.person_object.wikilinks = person.sitelinks;
+      deriver.getDerivedObject(this.person_object);
 
       // Add the wikimedia commons gallery property P373 (for more images)
       this.person_object.wiki_commons = this.getPropertyValue(
