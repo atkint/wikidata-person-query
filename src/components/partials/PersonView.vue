@@ -19,6 +19,7 @@
         </span>
       </b-col>
       <b-col cols="6">
+        <span v-if="person.cause_of_death.length > 0">{{props_lookup[person.cause_of_death[0]]}}</span> <span v-if="person.manner_of_death.length > 0">({{props_lookup[person.manner_of_death[0]]}})</span>
         <br />
       </b-col>
     </b-row>
@@ -29,7 +30,8 @@
 export default {
   name: "PersonView",
   props: {
-    person: ""
+    person: "",
+    props_lookup: {}
   }
 };
 </script>
